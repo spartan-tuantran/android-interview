@@ -3,11 +3,11 @@
 ## Your task (60 minutes)
 
 Build an offline-first news feed. The scaffold is already set up — your job is to
-fill in the **four TODOs** marked in the code.
+fill in the **four core TODOs** marked in the code, plus optional UI polish.
 
 ---
 
-## The four TODOs
+## The four core TODOs
 
 ### 1. `ArticleRepositoryImpl.getArticles()` — offline-first data flow
 Return a `Flow<FeedResult>` that emits cached data immediately while fetching
@@ -35,23 +35,39 @@ show `Offline` instead of wiping the screen.
 
 ---
 
+## Bonus UI TODOs (optional)
+
+These are in `NewsScreen.kt` and are not required to pass the unit tests, but
+finishing them shows end-to-end thinking:
+
+- **`ArticleCard`** — build the card layout (title, source, date, thumbnail)
+- **`AsyncImage`** — replace the grey placeholder box with a Coil `AsyncImage`
+- **`OfflineBanner`** — implement the compact offline strip above the article list
+
+---
+
 ## What's already done for you
 
-- Gradle setup (Hilt, Retrofit, Room, Coroutines, Coil)
-- Room entity, DAO, and database
-- Retrofit API interface and DTOs
-- Hilt DI modules (OkHttp interceptor needs the API key — see `AppModules.kt`)
+- Gradle setup (Hilt, Retrofit, Room, Coroutines, Coil, Kotlinx Serialization)
+- Room entity (`ArticleEntity`), DAO (`ArticleDao`), and database (`NewsDatabase`)
+- Retrofit API interface (`NewsApiService`) and DTOs (`NewsResponseDto`, `ArticleDto`)
+- Hilt DI modules — OkHttp client with API key interceptor wired up via `BuildConfig`
 - `NewsUiState` sealed interface with all five states
-- Full Compose UI — all states are rendered, you just need to feed them data
+- Compose scaffold — `NewsScreen`, `NewsScreenContent`, and all state branches are wired;
+  `ArticleCard` and `OfflineBanner` render placeholder stubs until you fill them in
 - Mapping helpers: `ArticleDto.toEntity()` and `ArticleEntity.toDomain()`
+- Unit test suite (`NewsViewModelTest`) — all tests pass once TODO #3 is implemented
 
 ---
 
 ## Setup
 
 1. Get a free API key from https://newsapi.org (takes 30 seconds)
-2. Put it in `app/build.gradle.kts` → `buildConfigField NEWS_API_KEY`
+2. Open `app/build.gradle.kts` and replace the `NEWS_API_KEY` value with your key
 3. Run the app — you should see loading → articles
+
+> The API key is injected via the OkHttp interceptor in `di/AppModules.kt`,
+> not as a query parameter, so it won't appear in request logs.
 
 ---
 
