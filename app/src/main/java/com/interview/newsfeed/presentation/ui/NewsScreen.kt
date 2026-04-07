@@ -1,17 +1,45 @@
 package com.interview.newsfeed.presentation.ui
 
-import androidx.compose.foundation.layout.*
+import android.content.Intent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -116,17 +144,17 @@ private fun ArticleCard(
   article: Article,
   modifier: Modifier = Modifier,
 ) {
-  // TODO (candidate): Build the article card UI.
-  // Requirements:
-  //  - Show title, source name, publishedAt
-  //  - Show thumbnail using AsyncImage (Coil) — handle null imageUrl gracefully
-  //  - Entire card should be clickable (open URL in browser — bonus)
-  // Keep it functional — design polish is not the focus here.
+  val context = LocalContext.current
   Row(
     modifier = modifier
       .fillMaxWidth()
+      .clickable {
+        val intent = Intent(Intent.ACTION_VIEW, article.url.toUri())
+        context.startActivity(intent)
+      }
       .padding(16.dp),
     horizontalArrangement = Arrangement.spacedBy(12.dp),
+    verticalAlignment = Alignment.Top,
   ) {
     Column(modifier = Modifier.weight(1f)) {
       Text(
@@ -142,39 +170,48 @@ private fun ArticleCard(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
       )
     }
-    // TODO (candidate): Replace placeholder with AsyncImage
+    // Thumbnail: show AsyncImage when URL is available, grey box as fallback
     Box(
       modifier = Modifier
         .size(72.dp)
-        .padding(4.dp),
-      contentAlignment = Alignment.Center,
+        .clip(MaterialTheme.shapes.small)
+        .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
-      // Replace with:
-      // AsyncImage(model = article.imageUrl, contentDescription = null,
-      //   modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-      Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.small,
-      ) {}
+      if (article.imageUrl != null) {
+        AsyncImage(
+          model = article.imageUrl,
+          contentDescription = null,
+          modifier = Modifier.fillMaxSize(),
+          contentScale = ContentScale.Crop,
+        )
+      }
     }
   }
 }
 
 @Composable
 private fun OfflineBanner(modifier: Modifier = Modifier) {
-  // TODO (candidate): Implement a non-intrusive banner.
-  // Should be a compact strip at the top of the list, not a full-screen overlay.
   Surface(
     modifier = modifier.fillMaxWidth(),
     color = MaterialTheme.colorScheme.errorContainer,
   ) {
-    Text(
-      text = "You're offline · showing cached content",
-      style = MaterialTheme.typography.labelMedium,
+    Row(
       modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-      color = MaterialTheme.colorScheme.onErrorContainer,
-    )
+      verticalAlignment = Alignment.CenterVertically,
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      Icon(
+        imageVector = Icons.Default.Info,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onErrorContainer,
+        modifier = Modifier.size(16.dp),
+      )
+      Text(
+        text = "You're offline · showing cached content",
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onErrorContainer,
+      )
+    }
   }
 }
 
