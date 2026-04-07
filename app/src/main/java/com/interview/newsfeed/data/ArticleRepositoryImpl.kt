@@ -8,6 +8,10 @@ import com.interview.newsfeed.domain.model.Article
 import com.interview.newsfeed.domain.model.FeedResult
 import com.interview.newsfeed.domain.repository.ArticleRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,16 +28,39 @@ class ArticleRepositoryImpl @Inject constructor(
   *
   * Hint: consider a flow builder that lets you launch concurrent coroutines.
   */
-  override fun getArticles(): Flow<FeedResult> {
-    TODO("Implement offline-first getArticles()")
+  override fun getArticles(): Flow<FeedResult> = channelFlow {
+    val networkFailed = MutableStateFlow(false)
+
+    // Concurrently fetch from network while Room serves the cache
+    launch {
+      try {
+        val entities = api.getTopHeadlines().articles.mapNotNull { it.toEntity() }
+        dao.upsertAll(entities)
+      } catch (_: Exception) {
+        // Surface the failure via FeedResult instead of throwing
+        networkFailed.value = true
+      }
+    }
+
+    // Room is the single source of truth; combine with the network-failure flag
+    // so every cache emission carries the correct networkFailed status.
+    dao.observeArticles()
+      .combine(networkFailed) { entities, failed ->
+        FeedResult(
+          articles = entities.map { it.toDomain() },
+          networkFailed = failed,
+        )
+      }
+      .collect { send(it) }
   }
 
   /**
-  * TODO (candidate): Fetch fresh articles from the network, replace the cache,
   * and let any error propagate to the caller.
   */
   override suspend fun refresh() {
-    TODO("Implement refresh()")
+    val entities = api.getTopHeadlines().articles.mapNotNull { it.toEntity() }
+    dao.clearAll()
+    dao.upsertAll(entities)
   }
 }
 

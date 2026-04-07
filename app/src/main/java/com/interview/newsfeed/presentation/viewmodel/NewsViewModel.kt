@@ -24,14 +24,14 @@ sealed interface NewsUiState {
   data class Success(val articles: List<Article>) : NewsUiState
 
   /**
-  * Network failed but we have cached data to show.
-  * The UI should display articles AND an offline banner.
-  */
+   * Network failed but we have cached data to show.
+   * The UI should display articles AND an offline banner.
+   */
   data class Offline(val articles: List<Article>) : NewsUiState
 
   /**
-  * Network failed AND cache is empty — nothing to show at all.
-  */
+   * Network failed AND cache is empty — nothing to show at all.
+   */
   data object OfflineEmpty : NewsUiState
 
   data class Error(val message: String) : NewsUiState
@@ -57,17 +57,50 @@ class NewsViewModel @Inject constructor(
   }
 
   /**
-  * TODO (candidate): Collect [repository.getArticles()] and map each [FeedResult]
-  * emission to the appropriate [NewsUiState].
-  */
+   * Collect [repository.getArticles()] and map each [FeedResult]
+   * emission to the appropriate [NewsUiState].
+   * Unexpected flow exceptions are caught and surfaced as [NewsUiState.Error].
+   */
   private fun observeArticles() {
-    TODO("Collect repository.getArticles() and map each FeedResult to NewsUiState")
+    viewModelScope.launch {
+      repository.getArticles().catch { e ->
+        _uiState.value = NewsUiState.Error(e.message ?: "Unknown error")
+      }.collect { result ->
+        _uiState.value = when {
+          result.articles.isNotEmpty() && !result.networkFailed -> NewsUiState.Success(result.articles)
+          result.articles.isNotEmpty() && result.networkFailed -> NewsUiState.Offline(result.articles)
+          result.networkFailed -> NewsUiState.OfflineEmpty
+          else -> NewsUiState.Loading // before first emission (empty cache, no network attempt yet)
+        }
+      }
+    }
   }
 
   /**
-  * TODO (candidate): Implement refresh, use pull-to-refresh for triggering?
-  */
+   * Pull-to-refresh: set the refreshing flag, call repository, then reset the flag.
+   * On failure, keep the current articles visible and show [NewsUiState.Offline]
+   * instead of wiping the screen.
+   */
   fun refresh() {
-    TODO("Implement refresh")
+    viewModelScope.launch {
+      _isRefreshing.value = true
+      try {
+        repository.refresh()
+      } catch (_: Exception) {
+        // Keep whatever is currently on screen; just add the offline banner
+        val currentArticles = when (val state = _uiState.value) {
+          is NewsUiState.Success -> state.articles
+          is NewsUiState.Offline -> state.articles
+          else -> emptyList()
+        }
+        _uiState.value = if (currentArticles.isNotEmpty()) {
+          NewsUiState.Offline(currentArticles)
+        } else {
+          NewsUiState.OfflineEmpty
+        }
+      } finally {
+        _isRefreshing.value = false
+      }
+    }
   }
 }

@@ -10,6 +10,7 @@ import com.interview.newsfeed.data.local.entity.ArticleEntity
   version = 1,
   exportSchema = false,
 )
+
 abstract class NewsDatabase : RoomDatabase() {
   abstract fun articleDao(): ArticleDao
 }
